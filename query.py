@@ -5,7 +5,6 @@ from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 from langchain import hub
 import dotenv
-import os
 
 
 def format_docs(docs):
