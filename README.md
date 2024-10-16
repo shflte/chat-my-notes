@@ -1,0 +1,1 @@
+Ref: [LangChain's documentation about RAG](https://python.langchain.com/docs/tutorials/rag/)
