@@ -1,45 +1,45 @@
-from langchain.chains import ConversationalRetrievalChain
 from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAI
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
+from langchain import hub
 import dotenv
+import os
 
-# Load environment variables (if any)
-dotenv.load_dotenv()
 
-# Function to query the vector store
-def query_vector_store(query, vector_store_path='vectorstore.faiss'):
-    # Load the pre-existing FAISS vector store
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+
+def query_vector_store(query, vector_store_path="vectorstore.faiss"):
     embeddings = OpenAIEmbeddings()
     vector_store = FAISS.load_local(
         folder_path=vector_store_path,
         embeddings=embeddings,
-        allow_dangerous_deserialization=True
+        allow_dangerous_deserialization=True,
     )
-    
-    # Create a retriever from the vector store
+
     retriever = vector_store.as_retriever()
-    
-    # Initialize the language model (OpenAI)
-    llm = OpenAI()
-    
-    # Set up the conversational retrieval chain
-    chain = ConversationalRetrievalChain.from_llm(llm, retriever)
-    
-    # Run the query through the chain and get the result
-    result = chain.invoke(query)
+    llm = ChatOpenAI(model="gpt-4o")
+
+    prompt = hub.pull("rlm/rag-prompt")
+    rag_chain = (
+        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+
+    result = rag_chain.invoke(query)
     return result
 
-# Main loop for querying
-if __name__ == "__main__":
-    while True:
-        # Get the query input from the user
-        query = input("Enter your query (or type 'exit' to quit): ")
-        
-        # Exit the loop if the user types 'exit'
-        if query.lower() == 'exit':
-            break
-        
-        # Query the vector store and print the result
-        result = query_vector_store(query)
-        print(result)
+
+dotenv.load_dotenv()
+while True:
+    query = input("Enter your query (or type 'exit' to quit): ")
+    if query.lower() == "exit":
+        break
+
+    result = query_vector_store(query)
+    print(result)
